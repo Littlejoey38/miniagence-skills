@@ -34,11 +34,20 @@ Use `ch` units for character-based measure (`max-width: 65ch`). Line-height scal
 
 **Avoid the invisible defaults**: Inter, Roboto, Open Sans, Lato, Montserrat. These are everywhere, making your design feel generic. They're fine for documentation or tools where personality isn't the goal—but if you want distinctive design, look elsewhere.
 
-**Better Google Fonts alternatives**:
-- Instead of Inter → **Instrument Sans**, **Plus Jakarta Sans**, **Outfit**
-- Instead of Roboto → **Onest**, **Figtree**, **Urbanist**
-- Instead of Open Sans → **Source Sans 3**, **Nunito Sans**, **DM Sans**
-- For editorial/premium feel → **Fraunces**, **Newsreader**, **Lora**
+**Pick the font from the brief, not from a category preset.** The most common AI typography failure is reaching for the same "tasteful" font for every editorial brief, the same "modern" font for every tech brief, the same "elegant serif" for every premium brief. Those reflexes produce monoculture across projects. The right font is one whose physical character matches *this specific* brand, audience, and moment.
+
+A working selection process:
+
+1. Read the brief once. Write down three concrete words for the brand voice. Not "modern" or "elegant" — those are dead categories. Try "warm and mechanical and opinionated" or "calm and clinical and careful" or "fast and dense and unimpressed" or "handmade and a little weird."
+2. Now imagine the font as a physical object the brand could ship: a typewriter ribbon, a hand-lettered shop sign, a 1970s mainframe terminal manual, a fabric label on the inside of a coat, a museum exhibit caption, a tax form, a children's book printed on cheap newsprint. Whichever physical object fits the three words is pointing at the right *kind* of typeface.
+3. Browse a font catalog (Google Fonts, Pangram Pangram, Adobe Fonts, Future Fonts, ABC Dinamo) with that physical object in mind. **Reject the first thing that "looks designy."** That's your trained-everywhere reflex. Keep looking.
+4. Avoid your defaults from previous projects. If you find yourself reaching for the same display font you used last time, make yourself pick something else.
+
+**Anti-reflexes worth defending against**:
+- A technical/utilitarian brief does NOT need a serif "for warmth." Most tech tools should look like tech tools.
+- An editorial/premium brief does NOT need the same expressive serif everyone is using right now. Premium can be Swiss-modern, can be neo-grotesque, can be a literal monospace, can be a quiet humanist sans.
+- A children's product does NOT need a rounded display font. Kids' books use real type.
+- A "modern" brief does NOT need a geometric sans. The most modern thing you can do in 2026 is not use the font everyone else is using.
 
 **System fonts are underrated**: `-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui` looks native, loads instantly, and is highly readable. Consider this for apps where performance > personality.
 
@@ -55,49 +64,42 @@ When pairing, contrast on multiple axes:
 
 ### Web Font Loading
 
-For Google Fonts, load them from the HTML `<head>`, not by sprinkling `@import url(...)` in random CSS files.
-
-**Recommended pattern**:
-
-```html
-<head>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap"
-    rel="stylesheet"
-  />
-</head>
-```
-
-Rules:
-- Keep a single import source of truth. If the layout already owns font loading, don't duplicate imports elsewhere.
-- Request only the families and weights you actually use.
-- Verify the available weights/styles before writing the URL. Example: `DM Serif Display` is 400 only, so `wght@300;400;500;600;700;800` is wrong.
-- Use the correct generic fallback: `serif` for `DM Serif Display`, `sans-serif` for `Syne` and `Outfit`, `monospace` for mono fonts.
-- If you must use `@import`, it has to be at the very top of the CSS file before any other rule. Otherwise it may be ignored.
-
-Example token setup:
+The layout shift problem: fonts load late, text reflows, and users see content jump. Here's the fix:
 
 ```css
-:root {
-  --font-heading: 'Syne', sans-serif;
-  --font-body: 'Outfit', sans-serif;
-  --font-accent: 'DM Serif Display', serif;
+/* 1. Use font-display: swap for visibility */
+@font-face {
+  font-family: 'CustomFont';
+  src: url('font.woff2') format('woff2');
+  font-display: swap;
 }
 
-.font-heading { font-family: var(--font-heading); }
-.font-body { font-family: var(--font-body); }
-.font-accent { font-family: var(--font-accent); }
+/* 2. Match fallback metrics to minimize shift */
+@font-face {
+  font-family: 'CustomFont-Fallback';
+  src: local('Arial');
+  size-adjust: 105%;        /* Scale to match x-height */
+  ascent-override: 90%;     /* Match ascender height */
+  descent-override: 20%;    /* Match descender depth */
+  line-gap-override: 10%;   /* Match line spacing */
+}
+
+body {
+  font-family: 'CustomFont', 'CustomFont-Fallback', sans-serif;
+}
 ```
+
+Tools like [Fontaine](https://github.com/unjs/fontaine) calculate these overrides automatically.
 
 ## Modern Web Typography
 
 ### Fluid Type
 
-Use `clamp(min, preferred, max)` for fluid typography. The middle value (e.g., `5vw + 1rem`) controls scaling rate—higher vw = faster scaling. Add a rem offset so it doesn't collapse to 0 on small screens.
+Fluid typography via `clamp(min, preferred, max)` scales text smoothly with the viewport. The middle value (e.g., `5vw + 1rem`) controls scaling rate—higher vw = faster scaling. Add a rem offset so it doesn't collapse to 0 on small screens.
 
-**When NOT to use fluid type**: Button text, labels, UI elements (should be consistent), very short text, or when you need precise breakpoint control.
+**Use fluid type for**: Headings and display text on marketing/content pages where text dominates the layout and needs to breathe across viewport sizes.
+
+**Use fixed `rem` scales for**: App UIs, dashboards, and data-dense interfaces. No major app design system (Material, Polaris, Primer, Carbon) uses fluid type in product UI — fixed scales with optional breakpoint adjustments give the spatial predictability that container-based layouts need. Body text should also be fixed even on marketing pages, since the size difference across viewports is too small to warrant it.
 
 ### OpenType Features
 
@@ -125,7 +127,6 @@ Check what features your font supports at [Wakamai Fondue](https://wakamaifondue
 ## Typography System Architecture
 
 Name tokens semantically (`--text-body`, `--text-heading`), not by value (`--font-size-16`). Include font stacks, size scale, weights, line-heights, and letter-spacing in your token system.
-Use semantic font tokens too: `--font-heading`, `--font-body`, `--font-accent`.
 
 ## Accessibility Considerations
 
@@ -138,4 +139,4 @@ Beyond contrast ratios (which are well-documented), consider:
 
 ---
 
-**Avoid**: More than 2-3 font families per project. Skipping fallback font definitions. Ignoring font loading performance (FOUT/FOIT). Using decorative fonts for body text. Requesting unsupported Google Font weights. Using `@import` halfway down a CSS file.
+**Avoid**: More than 2-3 font families per project. Skipping fallback font definitions. Ignoring font loading performance (FOUT/FOIT). Using decorative fonts for body text.
